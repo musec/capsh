@@ -34,9 +34,12 @@
 #include <fcntl.h>
 #include <libpreopen.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 
 extern char **environ;
+
+#define RTLD "/libexec/ld-elf.so.1"
 
 
 int main(int argc, char *argv[])
@@ -44,6 +47,16 @@ int main(int argc, char *argv[])
 	if (argc < 2) {
 		fprintf(stderr, "Usage:  capsh <command> [<arg> ...]\n");
 		return (1);
+	}
+
+	int linker = openat(AT_FDCWD, RTLD, O_RDONLY);
+	if (linker < 0) {
+		err(-1, "unable to open runtime linker '" RTLD "'");
+	}
+
+	int libdir = openat(AT_FDCWD, "/lib", O_RDONLY);
+	if (libdir < 0) {
+		err(-1, "unable to open library directory '/lib'");
 	}
 
 	int binary = openat(AT_FDCWD, argv[1], O_RDONLY);
@@ -57,7 +70,15 @@ int main(int argc, char *argv[])
 		err(-1, "failed to enter capability mode");
 	}
 
-	fexecve(binary, argv + 1, environ);
+	char *libdirstr;
+	if (asprintf(&libdirstr, "%d", libdir) < 0) {
+		err(-1, "failed to create LD_LIBRARY_PATH_FDS string");
+	}
+
+	setenv("LD_LIBRARY_PATH_FDS", libdirstr, 1);
+	free(libdirstr);
+
+	fldexec(linker, binary, argv + 1, environ);
 	err(-1, "failed to execute '%s'", argv[1]);
 
 	return 0;

@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2016 Jonathan Anderson
+ * Copyright (c) 2017 Jonathan Anderson
  * All rights reserved.
  *
  * This software was developed at Memorial University under the
@@ -27,59 +27,12 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/capsicum.h>
-
-#include <assert.h>
-#include <err.h>
-#include <fcntl.h>
-#include <libpreopen.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-
-#include "internal.h"
-
-extern char **environ;
-
-
-int main(int argc, char *argv[])
-{
-	if (argc < 2) {
-		fprintf(stderr, "Usage:  capsh <command> [<arg> ...]\n");
-		return (1);
-	}
-
-	int binary = openat(AT_FDCWD, argv[1], O_RDONLY);
-	if (binary < 0) {
-		err(-1, "unable to open executable '%s'", argv[1]);
-	}
-
-	int linker = find_linker(binary);
-	if (linker < 0) {
-		err(-1, "unable to find runtime linker");
-	}
-
-	int libdir = openat(AT_FDCWD, "/lib", O_RDONLY);
-	if (libdir < 0) {
-		err(-1, "unable to open library directory '/lib'");
-	}
-
-	//struct po_map *map = po_map_create(4);
-
-	if (cap_enter() != 0) {
-		err(-1, "failed to enter capability mode");
-	}
-
-	char *libdirstr;
-	if (asprintf(&libdirstr, "%d", libdir) < 0) {
-		err(-1, "failed to create LD_LIBRARY_PATH_FDS string");
-	}
-
-	setenv("LD_LIBRARY_PATH_FDS", libdirstr, 1);
-	free(libdirstr);
-
-	fldexec(linker, binary, argv + 1, environ);
-	err(-1, "failed to execute '%s'", argv[1]);
-
-	return 0;
-}
+/**
+ * Find the correct linker for an executable file.
+ *
+ * Return the descriptor encoded in CAPSH_LINKER if set, otherwise try to find
+ * the run-time linker for the given executable if possible (i.e., not in
+ * capability mode).  In the future, this function should examine the file type,
+ * ELF headers, etc.  For now, however, it just returns ld-elf.so.1.
+ */
+int	find_linker(int binary);

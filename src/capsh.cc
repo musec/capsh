@@ -27,71 +27,39 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/capsicum.h>
+#include "CommandLine.hh"
+#include "Error.hh"
 
-#include <assert.h>
-#include <err.h>
-#include <fcntl.h>
-#include <libpreopen.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
+#include "platform/Platform.hh"
 
-#include "internal.h"
+#include <cassert>
+#include <iostream>
 
-extern char **environ;
+using namespace capsh;
+using std::cerr;
 
 
 int main(int argc, char *argv[])
 {
 	if (argc < 2) {
-		fprintf(stderr, "Usage:  capsh <command> [<arg> ...]\n");
-		return (1);
+		cerr << "Usage:  capsh <command> [<arg> ...]\n";
+		return 1;
 	}
 
-	int binary = openat(AT_FDCWD, argv[1], O_RDONLY);
-	if (binary < 0) {
-		err(-1, "unable to open executable '%s'", argv[1]);
+	try
+	{
+		auto P = Platform::Current();
+
+		CommandLine command = P->ParseArgs(argc - 1, argv + 1);
+		P->EnterSandbox();
+		P->Execute(command);
+
+		assert(false && "unreachable");
 	}
-
-	int linker = find_linker(binary);
-	if (linker < 0) {
-		err(-1, "unable to find runtime linker");
+	catch (const Error& e)
+	{
+		cerr << e.what() << std::endl;
 	}
-
-	int libdir = openat(AT_FDCWD, "/lib", O_RDONLY);
-	if (libdir < 0) {
-		err(-1, "unable to open library directory '/lib'");
-	}
-
-	//struct po_map *map = po_map_create(4);
-
-	if (cap_enter() != 0) {
-		err(-1, "failed to enter capability mode");
-	}
-
-	char *libdirstr;
-	if (asprintf(&libdirstr, "%d", libdir) < 0) {
-		err(-1, "failed to create LD_LIBRARY_PATH_FDS string");
-	}
-
-	setenv("LD_LIBRARY_PATH_FDS", libdirstr, 1);
-	free(libdirstr);
-
-	/*
-	 * We need to store the descriptor of the binary in argv[1] to be picked
-	 * up by the run-time linker. Use asprintf() to guarantee that we'll
-	 * be able to store the FD here, even if capsh was somehow invoked with
-	 * a very short name and lots of already-opened descriptors. This is
-	 * technically a memory leak, but we're about to call fexecve() and blow
-	 * away all of our existing memory mappings!
-	 */
-	if (asprintf(argv + 1, "%d", binary) < 1) {
-		err(-1, "failed to store FD %d in argv[1]", binary);
-	}
-
-	fexecve(linker, argv, environ);
-	err(-1, "failed to execute run-time linker '%d'", linker);
 
 	return 0;
 }

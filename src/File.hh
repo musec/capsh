@@ -3,7 +3,7 @@
  * All rights reserved.
  *
  * This software was developed at Memorial University under the
- * NSERC Discovery program (RGPIN-2015-06048).
+ * NSERC Discovery (RGPIN-2015-06048) and RDC Ignite (#5404.1822.101) programs.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,31 +27,30 @@
  * SUCH DAMAGE.
  */
 
-#include <fcntl.h>
-#include <stdlib.h>
-#include <string.h>
+#ifndef CAPSH_FILE_HH
+#define CAPSH_FILE_HH
 
-#include "internal.h"
+#include "platform/PlatformFile.hh"
 
-#define	ENVVAR_NAME	"CAPSH_LINKER"
-#define RTLD_ELF "/libexec/ld-elf.so.1"
+#include <memory>
 
+namespace capsh {
 
-int
-find_linker(int binary)
+/**
+ * A platform-independent representation of a file.
+ */
+class File
 {
-	char *env, *end;
-	int fd;
+public:
+	File(std::shared_ptr<PlatformFile>);
 
-	env = getenv(ENVVAR_NAME);
-	if (env != NULL) {
-		fd = strtol(env, &end, 0);
-		if (end - env == strlen(env)) {
-			return (fd);
-		}
+	const PlatformFile& operator*() const;
+	const PlatformFile* operator->() const;
 
-		return (-1);
-	}
+private:
+	std::shared_ptr<PlatformFile> pFile_;
+};
 
-	return openat(AT_FDCWD, RTLD_ELF, O_RDONLY);
 }
+
+#endif // !defined(FILE_HH)

@@ -2,8 +2,20 @@ cmake_minimum_required(VERSION 2.6)
 
 project(capsh)
 
-# Always build with all warnings.
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wstrict-prototypes")
+# Use C++11.
+add_definitions("-std=c++11")
+
+# Build with lots and lots of warnings.
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Weverything")
+
+# Disregard warnings about C++98 compatibility: use C++11 vigorously.
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-c++98-compat")
+
+# Disregard warnings about padding to alignment: padding is fine.
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-padded")
+
+# Ignore vtable warnings that make a bit more work for the linker.
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-weak-vtables")
 
 # Look for libraries under /usr/local, too:
 include_directories("/usr/local/include")

@@ -1,6 +1,17 @@
+include_directories(.)
+
+add_subdirectory(platform)
+
 add_executable(capsh
-	capsh.c
-	linker.c
+	CommandLine.cc
+	Error.cc
+	File.cc
+	OSError.cc
+	UserError.cc
+	capsh.cc
+
+	$<TARGET_OBJECTS:platform-lib>
 )
+
 
 target_link_libraries(capsh preopen)

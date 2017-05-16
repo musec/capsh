@@ -78,8 +78,20 @@ int main(int argc, char *argv[])
 	setenv("LD_LIBRARY_PATH_FDS", libdirstr, 1);
 	free(libdirstr);
 
-	fldexec(linker, binary, argv + 1, environ);
-	err(-1, "failed to execute '%s'", argv[1]);
+	/*
+	 * We need to store the descriptor of the binary in argv[1] to be picked
+	 * up by the run-time linker. Use asprintf() to guarantee that we'll
+	 * be able to store the FD here, even if capsh was somehow invoked with
+	 * a very short name and lots of already-opened descriptors. This is
+	 * technically a memory leak, but we're about to call fexecve() and blow
+	 * away all of our existing memory mappings!
+	 */
+	if (asprintf(argv + 1, "%d", binary) < 1) {
+		err(-1, "failed to store FD %d in argv[1]", binary);
+	}
+
+	fexecve(linker, argv, environ);
+	err(-1, "failed to execute run-time linker '%d'", linker);
 
 	return 0;
 }

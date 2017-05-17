@@ -1,9 +1,9 @@
 /*-
- * Copyright (c) 2016 Jonathan Anderson
+ * Copyright (c) 2016-2017 Jonathan Anderson
  * All rights reserved.
  *
  * This software was developed at Memorial University under the
- * NSERC Discovery program (RGPIN-2015-06048).
+ * NSERC Discovery (RGPIN-2015-06048) and RDC Ignite (#5404.1822.101) programs.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions

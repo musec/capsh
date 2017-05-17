@@ -139,7 +139,7 @@ void FreeBSD::Execute(const CommandLine& c) const
 	std::vector<char*> argv
 	{
 		strdup("rtld"),
-		strdup("-fd"),
+		strdup("-f"),
 		strdup(std::to_string(binary.borrow()).c_str()),
 		strdup("--"),
 	};

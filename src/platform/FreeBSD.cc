@@ -169,7 +169,7 @@ void FreeBSD::Execute(const CommandLine& c) const
 }
 
 
-const FileDescriptor& FreeBSD::getLinkerFor(const FileDescriptor& binary) const
+const FileDescriptor& FreeBSD::getLinkerFor(const FileDescriptor&) const
 {
 	// TODO: ELF parsing, etc.
 	auto l = linkers_.find("");

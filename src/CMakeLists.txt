@@ -15,3 +15,4 @@ add_executable(capsh
 
 
 target_link_libraries(capsh preopen)
+install(TARGETS capsh DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)

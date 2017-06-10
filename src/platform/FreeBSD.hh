@@ -52,12 +52,14 @@ private:
 	// A mapping from ABIs (internal numbering) to linker file descriptors.
 	using LinkerMap = std::unordered_map<std::string, File>;
 
-	FreeBSD(LinkerMap linkers, std::vector<int> libdirs);
+	FreeBSD(LinkerMap linkers, std::vector<int> libdirs,
+	        std::vector<int> pathdirs);
 
 	const FileDescriptor& getLinkerFor(const FileDescriptor&) const;
 
 	const LinkerMap linkers_;
 	const std::vector<int> libdirs_;
+	const std::vector<int> pathdirs_;
 };
 
 } // namespace capsh

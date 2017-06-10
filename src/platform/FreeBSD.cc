@@ -33,6 +33,7 @@
 #include "UserError.hh"
 
 #include <cassert>
+#include <sstream>
 
 #include <fcntl.h>
 #include <stdlib.h>
@@ -40,6 +41,7 @@
 
 using namespace capsh;
 using std::string;
+using std::vector;
 
 extern char **environ;
 
@@ -52,6 +54,20 @@ std::unique_ptr<Platform> Platform::Current()
 
 std::unique_ptr<Platform> FreeBSD::Create()
 {
+	vector<int> pathdirs;
+	std::stringstream ss(getenv("PATH"));
+	while (ss.good())
+	{
+		string path;
+		getline(ss, path, ':');
+
+		int fd = openat(AT_FDCWD, path.c_str(), O_RDONLY);
+		if (fd >= 0)
+		{
+			pathdirs.push_back(fd);
+		}
+	}
+
 	static const char *ENVVAR_NAME = "CAPSH_DEFAULT_LINKER";
 	LinkerMap linkers;
 
@@ -95,7 +111,7 @@ std::unique_ptr<Platform> FreeBSD::Create()
 		linkers.emplace("", l->second);
 	}
 
-	std::vector<int> libdirs;
+	vector<int> libdirs;
 	for (const char *dirname : { "/lib", "/usr/lib", "/usr/local/lib" })
 	{
 		fd = openat(AT_FDCWD, dirname, O_RDONLY);
@@ -106,12 +122,12 @@ std::unique_ptr<Platform> FreeBSD::Create()
 	}
 
 	return std::unique_ptr<Platform>(
-		new FreeBSD(std::move(linkers), libdirs));
+		new FreeBSD(std::move(linkers), libdirs, pathdirs));
 }
 
 
-FreeBSD::FreeBSD(LinkerMap linkers, std::vector<int> libdirs)
-	: linkers_(std::move(linkers)), libdirs_(libdirs)
+FreeBSD::FreeBSD(LinkerMap linkers, vector<int> libdirs, vector<int> pathdirs)
+	: linkers_(std::move(linkers)), libdirs_(libdirs), pathdirs_(pathdirs)
 {
 }
 
@@ -119,14 +135,24 @@ FreeBSD::FreeBSD(LinkerMap linkers, std::vector<int> libdirs)
 CommandLine FreeBSD::ParseArgs(int argc, char *argv[]) const
 {
 	assert(argc > 0);
-	std::vector<const string> args(argv, argv + argc);
+	vector<const string> args(argv, argv + argc);
 	assert(not args.empty());
 
-	int fd = openat(AT_FDCWD, argv[0], O_RDONLY);
-	if (fd < 0)
+	int binary = openat(AT_FDCWD, argv[0], O_RDONLY);
+	for (int dir : pathdirs_)
+	{
+		if (binary >= 0)
+		{
+			break;
+		}
+
+		binary = openat(dir, argv[0], O_RDONLY);
+	}
+
+	if (binary < 0)
 		throw PosixError("unable to open executable '" + args[0] + "'");
 
-	return CommandLine(File(FileDescriptor::TakeOwnership(fd)), args);
+	return CommandLine(File(FileDescriptor::TakeOwnership(binary)), args);
 }
 
 
@@ -136,7 +162,7 @@ void FreeBSD::Execute(const CommandLine& c) const
 	const FileDescriptor& linker = getLinkerFor(binary);
 
 	// Build arguments vector: rtld -f <FD> -- <binary> <binary args>
-	std::vector<char*> argv
+	vector<char*> argv
 	{
 		strdup("rtld"),
 		strdup("-f"),

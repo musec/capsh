@@ -37,6 +37,8 @@
 #include <unordered_map>
 #include <vector>
 
+struct po_map;
+
 namespace capsh {
 
 class FreeBSD : public Capsicum
@@ -60,6 +62,7 @@ private:
 	const LinkerMap linkers_;
 	const std::vector<int> libdirs_;
 	const std::vector<int> pathdirs_;
+	po_map *map;
 };
 
 } // namespace capsh

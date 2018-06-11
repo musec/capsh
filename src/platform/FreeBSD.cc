@@ -35,8 +35,11 @@
 #include <cassert>
 #include <sstream>
 
+#include <err.h>
 #include <fcntl.h>
+#include <libpreopen.h>
 #include <stdlib.h>
+#include <string>
 #include <unistd.h>
 
 using namespace capsh;
@@ -129,6 +132,7 @@ std::unique_ptr<Platform> FreeBSD::Create()
 FreeBSD::FreeBSD(LinkerMap linkers, vector<int> libdirs, vector<int> pathdirs)
 	: linkers_(std::move(linkers)), libdirs_(libdirs), pathdirs_(pathdirs)
 {
+	map = po_map_create(4);
 }
 
 
@@ -151,6 +155,27 @@ CommandLine FreeBSD::ParseArgs(int argc, char *argv[]) const
 
 	if (binary < 0)
 		throw PosixError("unable to open executable '" + args[0] + "'");
+
+		char *path;
+		int i=1;
+		
+		//TODO: Make a policy file for each application and prevent the blind opening of all arguments for applications like echo
+
+		for (i=1; i <= argc; i++) {
+		//Try to preopen all the arguments given.
+
+			path = argv[i];
+			if (path == NULL || strcmp(path, "-") == 0) 
+			{
+				++i;				
+				continue;
+			}
+			else 
+			{
+				po_preopen(map, path, O_RDONLY);
+			}
+			++i;
+		}
 
 	return CommandLine(File(FileDescriptor::TakeOwnership(binary)), args);
 }
@@ -187,8 +212,22 @@ void FreeBSD::Execute(const CommandLine& c) const
 			libs += ":";
 		}
 	}
+
 	setenv("LD_LIBRARY_PATH_FDS", libs.c_str(), 1);
 
+	int shmfd = po_pack(map);
+
+    assert(shmfd != -1);
+
+    if (setenv("SHARED_MEMORYFD", std::to_string(shmfd).c_str() ,1)){
+            err(-1, "SHARED_MEMORYFD not set");
+            }
+
+    //setting the close-on-exec flag to 0
+    fcntl(shmfd, F_SETFD, 0);
+    
+    setenv("LD_PRELOAD", std::string("libpreopen.so").c_str() ,1);
+           
 	// And... go!
 	fexecve(linker.borrow(), argv.data(), environ);
 	throw PosixError("error in fexecve()");

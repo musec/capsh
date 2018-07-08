@@ -174,7 +174,6 @@ CommandLine FreeBSD::ParseArgs(int argc, char *argv[]) const
 			{
 				po_preopen(map, path, O_RDONLY);
 			}
-			++i;
 		}
 
 	return CommandLine(File(FileDescriptor::TakeOwnership(binary)), args);

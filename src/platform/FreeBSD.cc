@@ -115,7 +115,7 @@ std::unique_ptr<Platform> FreeBSD::Create()
 	}
 
 	vector<int> libdirs;
-	for (const char *dirname : { "/lib", "/usr/lib", "/usr/local/lib" })
+	for (const char *dirname : { "/lib", "/lib/casper", "/usr/lib", "/usr/local/lib" })
 	{
 		fd = openat(AT_FDCWD, dirname, O_RDONLY);
 		if (fd >= 0)

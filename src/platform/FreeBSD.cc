@@ -228,7 +228,7 @@ void FreeBSD::Execute(const CommandLine& c) const
     if(getenv("LD_PRELOAD"))
     {
 	    std::string curr = std::string(getenv("LD_PRELOAD"));
-	    std::string next = std::string(" libpreopen.so");
+	    std::string next = std::string(":libpreopen.so");
 	    setenv("LD_PRELOAD", (curr + next).c_str(),1);
     }
     else
